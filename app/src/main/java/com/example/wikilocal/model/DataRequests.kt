@@ -9,16 +9,11 @@ import com.android.volley.toolbox.StringRequest
 import org.json.JSONArray
 import org.json.JSONObject
 
-
 class DataRequests(private val requestQueue: RequestQueue) {
     private val latLngTag = "jsonRequestTag"
     private val articleContentTag = "getArticleTag"
     private val contentTag = "contentTag"
-
-    private var title = ""
-    private var image = ""
     private var text = ""
-    private var description = ""
 
     private lateinit var requestObject: StringRequest
     private var articles: MutableList<JSONObject> = mutableListOf()
