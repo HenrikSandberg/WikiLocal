@@ -1,6 +1,5 @@
 package com.example.wikilocal.model
 
-import androidx.core.text.HtmlCompat
 import com.android.volley.Request
 import com.android.volley.RequestQueue
 import com.android.volley.Response
@@ -67,9 +66,9 @@ class DataRequests(private val requestQueue: RequestQueue) {
     fun requestArticle(title: String) {
         val url = (
                 "https://no.wikipedia.org/api/" +
-                        "rest_v1/page/mobile-sections-lead/" +
-                        title.replace(' ', '_')
-                )
+                "rest_v1/page/mobile-sections-lead/" +
+                title.replace(' ', '_')
+        )
 
         val articleRequest = JsonObjectRequest(
             Request.Method.GET, url, null,
@@ -86,7 +85,6 @@ class DataRequests(private val requestQueue: RequestQueue) {
             },
             Response.ErrorListener { println("Error: $it") }
         )
-
         articleRequest.tag = contentTag
         requestQueue.add(articleRequest)
     }
