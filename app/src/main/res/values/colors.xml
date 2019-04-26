@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="color_primary">#575fcf</color>
+    <color name="color_primary_dark">#3c40c6</color>
+    <color name="navigation_bar_color">#000000</color>
+    <color name="color_accent">#f53b57</color>
+
+    <color name="white">#fff</color>
+    <color name="description">#4c4c4c</color>
+    <color name="light_gray_description">#D3D3D3</color>
+    <color name="delete_swipe_row_background">#fa315b</color>
+
+    <color name="spin_first_color">#0be881</color>
+    <color name="spin_second_color">#4bcffa</color>
+    <color name="spin_third_color">#ef5777</color>
+    <color name="spin_fourth_color">#ffc048</color>
+</resources>

@@ -1,0 +1,21 @@
+<resources>
+    <string name="app_name">WikiLocal</string>
+    <string name="action_settings">Settings</string>
+
+    <string name="action_add_favourite">Add to Favourites</string>
+    <string name="backdrop_title">OSLO</string>
+    <string name="backdrop_subtitle">Articles from wikipedia around you</string>
+    <string name="dots">Dots</string>
+    <string name="top_images">Top images</string>
+    <string name="delete">delete</string>
+    <string name="saved_article_photo">Saved article photo</string>
+    <string name="delete_icon">delete icon</string>
+    <string name="title_activity_maps">Map</string>
+    <string name="xyz">xyz</string>
+    <string name="title_of_place_here">Title of place here</string>
+    <string name="article_picture">Article picture</string>
+    <string name="add_to_favorite">Add to favorite</string>
+    <string name="artikler_fra_wikipedia">Artikler fra wikipedia</string>
+    <string name="thumbnail_of_place">thumbnail of place</string>
+    <string name="title_activity_basic">BasicActivity</string>
+</resources>

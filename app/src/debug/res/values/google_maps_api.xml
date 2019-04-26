@@ -1,0 +1,24 @@
+<resources>
+    <!--
+    TODO: Before you run your application, you need a Google Maps API key.
+
+    To get one, follow this link, follow the directions and press "Create" at the end:
+
+    https://console.developers.google.com/flows/enableapi?apiid=maps_android_backend&keyType=CLIENT_SIDE_ANDROID&r=6A:AD:2E:3C:B7:B2:DD:66:CF:84:FC:8B:93:14:46:79:A0:36:7F:B8%3Bcom.example.wikilocal.controller
+
+    You can also add your credentials to an existing key, using these values:
+
+    Package title:
+    6A:AD:2E:3C:B7:B2:DD:66:CF:84:FC:8B:93:14:46:79:A0:36:7F:B8
+
+    SHA-1 certificate fingerprint:
+    6A:AD:2E:3C:B7:B2:DD:66:CF:84:FC:8B:93:14:46:79:A0:36:7F:B8
+
+    Alternatively, follow the directions here:
+    https://developers.google.com/maps/documentation/android/start#get-key
+
+    Once you have your key (it starts with "AIza"), replace the "google_maps_key"
+    string in this file.
+    -->
+    <string name="google_maps_key" translatable="false" templateMergeStrategy="preserve">AIzaSyBV3gn63XXns_yNqwmnzQY1Sdt4i0t74VA</string>
+</resources>

@@ -1,0 +1,28 @@
+<resources>
+    <dimen name="fab_margin">16sp</dimen>
+    <dimen name="activity_horizontal_margin">16sp</dimen>
+    <dimen name="activity_vertical_margin">16sp</dimen>
+    <dimen name="tab_max_width">264sp</dimen>
+    <dimen name="tab_padding_bottom">16sp</dimen>
+    <dimen name="tab_label">14sp</dimen>
+    <dimen name="custom_tab_layout_height">72sp</dimen>
+    <dimen name="text_margin">16sp</dimen>
+    <dimen name="item_offset">10sp</dimen>
+    <dimen name="detail_backdrop_height">250sp</dimen>
+    <dimen name="backdrop_title">30sp</dimen>
+    <dimen name="backdrop_subtitle">18sp</dimen>
+    <dimen name="card_margin">5sp</dimen>
+    <dimen name="card_album_radius">0sp</dimen>
+    <dimen name="album_cover_height">160sp</dimen>
+    <dimen name="album_title_padding">10sp</dimen>
+    <dimen name="album_title">15sp</dimen>
+    <dimen name="songs_count_padding_bottom">5sp</dimen>
+    <dimen name="songs_count">12sp</dimen>
+    <dimen name="ic_album_overflow_width">20sp</dimen>
+    <dimen name="ic_album_overflow_height">30sp</dimen>
+    <dimen name="ic_album_overflow_margin_top">10sp</dimen>
+    <dimen name="activity_padding_horizontal">16sp</dimen>
+    <dimen name="padding_10">10sp</dimen>
+    <dimen name="ic_delete">30sp</dimen>
+    <dimen name="thumbnail">90sp</dimen>
+</resources>
