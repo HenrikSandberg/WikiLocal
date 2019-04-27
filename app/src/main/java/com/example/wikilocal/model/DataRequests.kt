@@ -12,6 +12,7 @@ class DataRequests(private val requestQueue: RequestQueue) {
     private val latLngTag = "jsonRequestTag"
     private val articleContentTag = "getArticleTag"
     private val contentTag = "contentTag"
+    private val landmarkTag = "landmarkTag"
     private var text = ""
 
     private lateinit var requestObject: StringRequest
@@ -21,9 +22,10 @@ class DataRequests(private val requestQueue: RequestQueue) {
     fun getLatLngTag():String { return latLngTag }
     fun articlesTag():String { return articleContentTag }
     fun getArticleTag():String { return contentTag; }
+    fun landmarkRequestTag():String {return landmarkTag}
     fun getArticleContent():String {return text }
 
-    fun requestArticles(latitude: Double, longitude: Double) {
+    fun requestArticles(latitude: Double, longitude: Double, tag: String) {
         val radius = 5000
         val numberOfArticles = 20
         val url = ("https://no.wikipedia.org/w/api.php?" +
@@ -43,7 +45,7 @@ class DataRequests(private val requestQueue: RequestQueue) {
             },
             Response.ErrorListener { println("Error: $it") }
         )
-        requestObject.tag = latLngTag
+        requestObject.tag = tag
         requestQueue.add(requestObject)
     }
 
@@ -51,7 +53,7 @@ class DataRequests(private val requestQueue: RequestQueue) {
         (0 until json.length()).forEach { position ->
             val url = ("https://no.wikipedia.org/api/rest_v1/page/summary/"
                     + json.getJSONObject(position).getString("title")
-                    )
+            )
             articles.clear()
             val articleRequest = JsonObjectRequest (
                 Request.Method.GET, url, null,

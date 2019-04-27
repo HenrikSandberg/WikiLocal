@@ -89,7 +89,6 @@ class ArticleActivity : AppCompatActivity() {
                 }
             }
         })
-
     }
 
     private fun addArticle() {
@@ -105,7 +104,6 @@ class ArticleActivity : AppCompatActivity() {
                 articleModel.insert(newArticle)
             }
         })
-
     }
 
     private fun removeSavedArticle() {

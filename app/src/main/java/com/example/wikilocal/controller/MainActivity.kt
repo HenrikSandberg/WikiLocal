@@ -4,7 +4,7 @@ import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.location.Geocoder
 import android.location.Location
 import android.location.LocationManager
@@ -27,6 +27,7 @@ import androidx.core.content.FileProvider
 import com.android.volley.RequestQueue
 import com.android.volley.toolbox.*
 import com.example.wikilocal.model.DataRequests
+import com.example.wikilocal.model.LandmarksRecognizer
 import com.example.wikilocal.model.ViewPagerAdapter
 import com.example.wikilocal.model.database.Article
 import com.google.android.gms.location.*
@@ -37,7 +38,6 @@ import safety.com.br.android_shake_detector.core.ShakeOptions
 import java.io.File
 import java.io.IOException
 import java.text.DateFormat.getDateInstance
-import java.text.SimpleDateFormat
 import java.util.*
 
 class MainActivity : AppCompatActivity(),
@@ -69,7 +69,7 @@ class MainActivity : AppCompatActivity(),
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        createShakeDetection()
+        //createShakeDetection()
 
         //Elements on screen
         viewPager = findViewById(R.id.viewpager)
@@ -109,6 +109,8 @@ class MainActivity : AppCompatActivity(),
             if (it.tag == request.articlesTag()){
                 articles = request.getArticles()
                 updateList()
+            } else if (it.tag == request.landmarkRequestTag()){
+
             }
         }
     }
@@ -138,27 +140,26 @@ class MainActivity : AppCompatActivity(),
         shakeDetector = ShakeDetector(options).start(this) { getRandomArticle() }
     }
 
-    private var currentPhotoPath: String? = null
-
-    @Throws(IOException::class)
-    private fun createImageFile(): File {
-        // Create an image file name
-        val timeStamp = getDateInstance()
-        val storageDir: File? = getExternalFilesDir(Environment.DIRECTORY_PICTURES)
-        return File.createTempFile(
-            "JPEG_${timeStamp}_",
-            ".jpg",
-            storageDir
-        ).apply {
-            currentPhotoPath = absolutePath
+    @Throws(TypeCastException::class)
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        if (requestCode == REQUEST_IMAGE_CAPTURE ) { // && resultCode == RESULT_OK
+            val bmOptions = BitmapFactory.Options().apply {
+                BitmapFactory.decodeFile(currentPhotoPath, this)
+            }
+            BitmapFactory.decodeFile(currentPhotoPath, bmOptions)?.also { bitmap ->
+                val fire = LandmarksRecognizer()
+                fire.recognizeImage(bitmap)
+            }
         }
+
+        super.onActivityResult(requestCode, resultCode, data)
     }
+
+    private var currentPhotoPath: String? = null
 
     private fun dispatchTakePictureIntent() {
         Intent(MediaStore.ACTION_IMAGE_CAPTURE).also { takePictureIntent ->
-            // Ensure that there's a camera activity to handle the intent
             takePictureIntent.resolveActivity(packageManager)?.also {
-                // Create the File where the photo should go
                 val photoFile: File? = try {
                     createImageFile()
                 } catch (ex: IOException) {
@@ -175,7 +176,19 @@ class MainActivity : AppCompatActivity(),
                     startActivityForResult(takePictureIntent, REQUEST_IMAGE_CAPTURE)
                 }
             }
-            println("RUN")
+        }
+    }
+
+    @Throws(IOException::class)
+    private fun createImageFile(): File {
+        val timeStamp = getDateInstance()
+        val storageDir: File? = getExternalFilesDir(Environment.DIRECTORY_PICTURES)
+        return File.createTempFile(
+            "JPEG_${timeStamp}_",
+            ".jpg",
+            storageDir
+        ).apply {
+            currentPhotoPath = absolutePath
         }
     }
 
@@ -193,8 +206,7 @@ class MainActivity : AppCompatActivity(),
             fastestInterval = 1000000L
         }
 
-        LocationServices
-            .getSettingsClient(this)
+        LocationServices.getSettingsClient(this)
             .checkLocationSettings(
                 LocationSettingsRequest
                     .Builder()
@@ -206,7 +218,8 @@ class MainActivity : AppCompatActivity(),
         if (ActivityCompat.checkSelfPermission (this, Manifest.permission.ACCESS_FINE_LOCATION )
             != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission (
                 this,
-                Manifest.permission.ACCESS_COARSE_LOCATION)
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            )
         != PackageManager.PERMISSION_GRANTED) {
             return
         }
@@ -220,7 +233,7 @@ class MainActivity : AppCompatActivity(),
 
             if (latitude != null && longitude != null) {
                 setTitleText()
-                requestArticles()
+                requestArticles(request.getLatLngTag())
             }
         }
     }
@@ -287,7 +300,7 @@ class MainActivity : AppCompatActivity(),
                 startActivityForResult(
                     Intent(Settings.ACTION_NETWORK_OPERATOR_SETTINGS),
                     12)
-                requestArticles()
+                requestArticles(request.getLatLngTag())
             }
             .setNegativeButton("no") { dialog, _ ->
                 dialog.cancel()
@@ -298,11 +311,11 @@ class MainActivity : AppCompatActivity(),
     }
 
     /***************************** REQUEST DATA FROM WIKIPEDIA *****************************/
-    fun requestArticles() {
+    fun requestArticles(tag: String) {
         if ((getSystemService(WIFI_SERVICE) as WifiManager).isWifiEnabled) {
             if (latitude != null && longitude != null){
                 request = DataRequests(requestQueue)
-                request.requestArticles(latitude!!, longitude!!)
+                request.requestArticles(latitude!!, longitude!!, tag)
             } else {
                 noGpsAlert()
             }
@@ -347,18 +360,28 @@ class MainActivity : AppCompatActivity(),
     }
 
     override fun onSavedArticleFragmentInteraction(article: Article) {
-        if (!isFinishing) { goToSaved(article) }
+        if (!isFinishing) {
+            with (Intent(this, ArticleActivity::class.java)) {
+                putExtra("title", article.title)
+                putExtra("description", article.description)
+                putExtra("image",  article.image)
+                putExtra("text",  article.text)
+                startActivity(this)
+            }
+        }
     }
 
     private fun goTo(article: JSONObject) {
-        with ( Intent(this, ArticleActivity::class.java) ) {
-            putExtra("title",
+        with(Intent(this, ArticleActivity::class.java)) {
+            putExtra(
+                "title",
                 if (article.has("displaytitle"))
                     article.getString("displaytitle")
-                else  "No title available"
+                else "No title available"
             )
 
-            putExtra("description",
+            putExtra(
+                "description",
                 when {
                     article.has("description") -> article.getString("description")
                     article.has("extract") -> article.getString("extract")
@@ -367,18 +390,8 @@ class MainActivity : AppCompatActivity(),
             )
 
             if (article.has("originalimage"))
-                putExtra("image", article.getJSONObject("originalimage").getString("source") )
+                putExtra("image", article.getJSONObject("originalimage").getString("source"))
 
-            startActivity(this)
-        }
-    }
-
-    private fun goToSaved(article: Article) {
-        with (Intent(this, ArticleActivity::class.java)) {
-            putExtra("title", article.title)
-            putExtra("description", article.description)
-            putExtra("image",  article.image)
-            putExtra("text",  article.text)
             startActivity(this)
         }
     }
