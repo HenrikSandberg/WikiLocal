@@ -30,6 +30,7 @@ class ArticleActivity : AppCompatActivity() {
     private var requestTag = ""
 
     private var isSaved = false
+    private var hasLooked = false
     private lateinit var articleModel: ArticleModel
     private lateinit var articleTextView: TextView
 
@@ -46,8 +47,8 @@ class ArticleActivity : AppCompatActivity() {
         //Set listeners
         val faveButton = findViewById<ImageButton>(R.id.add_favorite)
         faveButton.setOnClickListener {
-            if (!isSaved) addArticle() else removeSavedArticle()
             updateFavoriteIcon()
+            if (isSaved) addArticle() else removeSavedArticle()
         }
 
         //Access content
@@ -63,7 +64,7 @@ class ArticleActivity : AppCompatActivity() {
             }
         }
 
-        lookIfArticleIsSavedAlready();
+        lookIfArticleIsSavedAlready()
         displayArticle()
     }
 
@@ -78,29 +79,38 @@ class ArticleActivity : AppCompatActivity() {
     private fun lookIfArticleIsSavedAlready() {
         articleModel.allArticles.observe(this, Observer { articles ->
             articles.forEach { article ->
-                if (article.title == title){
-                    updateFavoriteIcon()
+                if (!isSaved && !hasLooked) {
+                    if (article.title == title) {
+                        updateFavoriteIcon()
+                        hasLooked = true
+                    }
+                } else {
                     return@Observer
                 }
             }
         })
+
     }
 
-    private fun addArticle(){
+    private fun addArticle() {
         var shouldAddArticle = true
         val newArticle = Article(title, image ?: "", description, text)
-        val articleList = articleModel.allArticles.value
-        articleList?.forEach {article ->
-            if (article.title == newArticle.title){
-                shouldAddArticle = false
+        articleModel.allArticles.observe(this, Observer {articles->
+            articles.forEach { article ->
+                if (article.title == newArticle.title){
+                    shouldAddArticle = false
+                }
             }
-        }
-        if (shouldAddArticle) articleModel.insert(newArticle)
+            if (shouldAddArticle) {
+                articleModel.insert(newArticle)
+            }
+        })
+
     }
 
-    private fun removeSavedArticle(){
+    private fun removeSavedArticle() {
         articleModel.allArticles.observe(this, Observer { articleList ->
-            articleList.forEach {article ->
+            articleList.forEach { article ->
                 if (article.title == title){
                     articleModel.delete(article)
                     return@Observer

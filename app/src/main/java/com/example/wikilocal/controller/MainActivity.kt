@@ -4,12 +4,16 @@ import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
 import android.location.Geocoder
 import android.location.Location
 import android.location.LocationManager
+import android.net.Uri
 import android.net.wifi.WifiManager
 import android.os.Bundle
+import android.os.Environment
 import android.os.Looper
+import android.provider.MediaStore
 import android.provider.Settings
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
@@ -19,15 +23,21 @@ import androidx.viewpager.widget.ViewPager
 import com.google.android.material.tabs.TabLayout
 import androidx.appcompat.widget.Toolbar
 import androidx.core.app.ActivityCompat
+import androidx.core.content.FileProvider
 import com.android.volley.RequestQueue
 import com.android.volley.toolbox.*
 import com.example.wikilocal.model.DataRequests
 import com.example.wikilocal.model.ViewPagerAdapter
 import com.example.wikilocal.model.database.Article
 import com.google.android.gms.location.*
+import com.google.android.material.floatingactionbutton.FloatingActionButton
 import org.json.JSONObject
 import safety.com.br.android_shake_detector.core.ShakeDetector
 import safety.com.br.android_shake_detector.core.ShakeOptions
+import java.io.File
+import java.io.IOException
+import java.text.DateFormat.getDateInstance
+import java.text.SimpleDateFormat
 import java.util.*
 
 class MainActivity : AppCompatActivity(),
@@ -47,6 +57,7 @@ class MainActivity : AppCompatActivity(),
     private var articles: MutableList<JSONObject> = mutableListOf()
 
     private var shakeDetector: ShakeDetector? = null
+    private val REQUEST_IMAGE_CAPTURE = 1
 
     private lateinit var viewPager:ViewPager
     private var nearYouFragment: NearYouFragment? = null
@@ -70,12 +81,19 @@ class MainActivity : AppCompatActivity(),
         supportActionBar!!.setDisplayHomeAsUpEnabled(false)
         tabLayout.setupWithViewPager(viewPager)
         setupViewPager()
+
+        //Camera
+        val camera = findViewById<FloatingActionButton>(R.id.photo_button)
+
+        camera.setOnClickListener {
+            dispatchTakePictureIntent()
+        }
     }
 
     override fun onStart() {
         super.onStart()
 
-        if (!shakeDetector?.isRunning!!){
+        if (shakeDetector == null){
             createShakeDetection()
         }
 
@@ -118,6 +136,47 @@ class MainActivity : AppCompatActivity(),
             .shakeCount(2)
             .sensibility(2.0f)
         shakeDetector = ShakeDetector(options).start(this) { getRandomArticle() }
+    }
+
+    private var currentPhotoPath: String? = null
+
+    @Throws(IOException::class)
+    private fun createImageFile(): File {
+        // Create an image file name
+        val timeStamp = getDateInstance()
+        val storageDir: File? = getExternalFilesDir(Environment.DIRECTORY_PICTURES)
+        return File.createTempFile(
+            "JPEG_${timeStamp}_",
+            ".jpg",
+            storageDir
+        ).apply {
+            currentPhotoPath = absolutePath
+        }
+    }
+
+    private fun dispatchTakePictureIntent() {
+        Intent(MediaStore.ACTION_IMAGE_CAPTURE).also { takePictureIntent ->
+            // Ensure that there's a camera activity to handle the intent
+            takePictureIntent.resolveActivity(packageManager)?.also {
+                // Create the File where the photo should go
+                val photoFile: File? = try {
+                    createImageFile()
+                } catch (ex: IOException) {
+                    println("Error Accrued $ex")
+                    null
+                }
+                photoFile?.also {
+                    val photoURI: Uri = FileProvider.getUriForFile(
+                        this,
+                        "com.mydomain.fileprovider",
+                        it
+                    )
+                    takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoURI)
+                    startActivityForResult(takePictureIntent, REQUEST_IMAGE_CAPTURE)
+                }
+            }
+            println("RUN")
+        }
     }
 
     /****************************************** LOCATION *************************************************/

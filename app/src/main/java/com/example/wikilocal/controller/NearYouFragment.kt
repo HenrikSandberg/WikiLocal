@@ -34,6 +34,7 @@ class NearYouFragment : Fragment() {
         }
 
         swipeContainer.setColorSchemeResources (
+            R.color.color_primary,
             R.color.spin_first_color,
             R.color.spin_second_color,
             R.color.spin_third_color,
