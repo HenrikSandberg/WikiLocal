@@ -63,7 +63,7 @@ class NearYouFragment : Fragment() {
     }
 
     private fun updateWithThread() {
-        (activity as MainActivity).requestArticles()
+        (activity as MainActivity).requestArticles(null)
     }
 
     fun removeUpdaterIcon() {

@@ -25,7 +25,7 @@ class DataRequests(private val requestQueue: RequestQueue) {
     fun landmarkRequestTag():String {return landmarkTag}
     fun getArticleContent():String {return text }
 
-    fun requestArticles(latitude: Double, longitude: Double, tag: String) {
+    fun requestArticles(latitude: Double, longitude: Double, tag: String?) {
         val radius = 5000
         val numberOfArticles = 20
         val url = ("https://no.wikipedia.org/w/api.php?" +
@@ -41,26 +41,32 @@ class DataRequests(private val requestQueue: RequestQueue) {
                 val articleJson = JSONObject(response)
                     .getJSONObject("query")
                     .getJSONArray("geosearch")
-                requestArticles(articleJson)
+                putArticles(articleJson, tag ?: articleContentTag)
             },
             Response.ErrorListener { println("Error: $it") }
         )
-        requestObject.tag = tag
+        requestObject.tag = latLngTag
         requestQueue.add(requestObject)
     }
 
-    private fun requestArticles(json: JSONArray) {
-        (0 until json.length()).forEach { position ->
+    private fun putArticles(json: JSONArray, tag: String) {
+        ( 0 until json.length() ).forEach { position ->
             val url = ("https://no.wikipedia.org/api/rest_v1/page/summary/"
                     + json.getJSONObject(position).getString("title")
             )
             articles.clear()
             val articleRequest = JsonObjectRequest (
                 Request.Method.GET, url, null,
-                Response.Listener { articles.add(it) },
+                Response.Listener {
+                    articles.add(it)
+
+                    if (tag == landmarkTag)
+                        println(it)
+                },
                 Response.ErrorListener { println("Error: $it") }
             )
-            articleRequest.tag = articleContentTag
+
+            articleRequest.tag = tag
             requestQueue.add(articleRequest)
         }
     }

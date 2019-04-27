@@ -28,7 +28,7 @@ class SavedArticleFragment : Fragment() {
         val articleModel = ViewModelProviders.of(this).get(ArticleModel::class.java)
 
         if (view is RecyclerView) {
-            articleModel.allArticles.observe(this, Observer {articles ->
+            articleModel.allArticles.observe(this, Observer { articles ->
                 with (view) {
                     layoutManager = LinearLayoutManager(context)
                     adapter = SavedArticleRecyclerViewAdapter(articles.reversed(), listener)

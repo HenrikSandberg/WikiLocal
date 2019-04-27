@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.location.Geocoder
 import android.location.Location
@@ -16,6 +17,7 @@ import android.os.Looper
 import android.provider.MediaStore
 import android.provider.Settings
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import com.example.wikilocal.R
@@ -27,14 +29,14 @@ import androidx.core.content.FileProvider
 import com.android.volley.RequestQueue
 import com.android.volley.toolbox.*
 import com.example.wikilocal.model.DataRequests
-import com.example.wikilocal.model.LandmarksRecognizer
 import com.example.wikilocal.model.ViewPagerAdapter
 import com.example.wikilocal.model.database.Article
 import com.google.android.gms.location.*
 import com.google.android.material.floatingactionbutton.FloatingActionButton
+import com.google.firebase.ml.vision.FirebaseVision
+import com.google.firebase.ml.vision.cloud.FirebaseVisionCloudDetectorOptions
+import com.google.firebase.ml.vision.common.FirebaseVisionImage
 import org.json.JSONObject
-import safety.com.br.android_shake_detector.core.ShakeDetector
-import safety.com.br.android_shake_detector.core.ShakeOptions
 import java.io.File
 import java.io.IOException
 import java.text.DateFormat.getDateInstance
@@ -54,10 +56,13 @@ class MainActivity : AppCompatActivity(),
 
     private var latitude: Double? = null
     private var longitude:Double? = null
+    private var lookForLandMark = false
+    private var fireLat:Double = 0.0
+    private var fireLon:Double = 0.0
     private var articles: MutableList<JSONObject> = mutableListOf()
 
-    private var shakeDetector: ShakeDetector? = null
     private val REQUEST_IMAGE_CAPTURE = 1
+    private var currentPhotoPath: String? = null
 
     private lateinit var viewPager:ViewPager
     private var nearYouFragment: NearYouFragment? = null
@@ -68,8 +73,6 @@ class MainActivity : AppCompatActivity(),
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-
-        //createShakeDetection()
 
         //Elements on screen
         viewPager = findViewById(R.id.viewpager)
@@ -83,34 +86,28 @@ class MainActivity : AppCompatActivity(),
         setupViewPager()
 
         //Camera
-        val camera = findViewById<FloatingActionButton>(R.id.photo_button)
-
-        camera.setOnClickListener {
+        findViewById<FloatingActionButton>(R.id.photo_button).setOnClickListener {
             dispatchTakePictureIntent()
         }
     }
 
     override fun onStart() {
         super.onStart()
-
-        if (shakeDetector == null){
-            createShakeDetection()
-        }
-
         requestQueue = Volley.newRequestQueue(this)
 
         locationRequest = LocationRequest()
         val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
-
         if (!locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) { noGpsAlert() }
         if (checkPermission(this)){ updateLocation() }
 
         requestQueue.addRequestFinishedListener<JSONObject> {
-            if (it.tag == request.articlesTag()){
+            if (it.tag == request.articlesTag()) {
                 articles = request.getArticles()
                 updateList()
-            } else if (it.tag == request.landmarkRequestTag()){
-
+            }
+            if (it.tag == request.landmarkRequestTag() && lookForLandMark) {
+                lookForLandMark = false
+                onNearYouFragmentInteraction(request.getArticles().first())
             }
         }
     }
@@ -119,7 +116,6 @@ class MainActivity : AppCompatActivity(),
         super.onStop()
         fusedLocationProviderClient.removeLocationUpdates(locationCallback)
         requestQueue.stop()
-        shakeDetector?.stopShakeDetector(baseContext)
     }
 
     override fun onDestroy() {
@@ -127,51 +123,67 @@ class MainActivity : AppCompatActivity(),
         articles.clear()
         fusedLocationProviderClient.removeLocationUpdates(locationCallback)
         requestQueue.stop()
-        shakeDetector?.destroy(baseContext)
         finish()
     }
 
-    private fun createShakeDetection() {
-        val options = ShakeOptions()
-            .background(true)
-            .interval(1000)
-            .shakeCount(2)
-            .sensibility(2.0f)
-        shakeDetector = ShakeDetector(options).start(this) { getRandomArticle() }
-    }
-
-    @Throws(TypeCastException::class)
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        if (requestCode == REQUEST_IMAGE_CAPTURE ) { // && resultCode == RESULT_OK
+        if ( requestCode == REQUEST_IMAGE_CAPTURE ) {
             val bmOptions = BitmapFactory.Options().apply {
                 BitmapFactory.decodeFile(currentPhotoPath, this)
             }
-            BitmapFactory.decodeFile(currentPhotoPath, bmOptions)?.also { bitmap ->
-                val fire = LandmarksRecognizer()
-                fire.recognizeImage(bitmap)
-            }
+            BitmapFactory.decodeFile(currentPhotoPath, bmOptions)?.also { bitmap -> recognizeImage(bitmap) }
         }
-
         super.onActivityResult(requestCode, resultCode, data)
     }
 
-    private var currentPhotoPath: String? = null
+    /****************************************** RECOGNIZE LANDMARK *************************************************/
+    private fun recognizeImage(bitmap: Bitmap) {
+        val options = FirebaseVisionCloudDetectorOptions.Builder()
+            .setModelType(FirebaseVisionCloudDetectorOptions.LATEST_MODEL)
+            .setMaxResults(5)
+            .build()
+        val detector = FirebaseVision.getInstance().getVisionCloudLandmarkDetector(options)
+        val image = FirebaseVisionImage.fromBitmap(bitmap)
+        var bestConfidence:Float? = null
 
+        Toast.makeText(applicationContext, "Looking for article", Toast.LENGTH_SHORT).show()
+        with( detector.detectInImage(image) ) {
+            addOnSuccessListener { fireLandmarks ->
+                if (fireLandmarks.size > 0) {
+                    fireLandmarks.forEach { landmark ->
+                        val confidence = landmark.confidence
+                        println(landmark.landmark)
+                        if (bestConfidence == null || confidence >= bestConfidence!!) {
+                            bestConfidence = confidence
+                            landmark.locations.forEach { location ->
+                                fireLat = location.latitude
+                                fireLon = location.longitude
+                            }
+                        }
+                    }
+                    lookForLandMark = true
+                    request = DataRequests(requestQueue)
+                    request.requestArticles(fireLat, fireLon, request.landmarkRequestTag())
+                } else {
+                    Toast.makeText(applicationContext, "Could not find landmark", Toast.LENGTH_SHORT).show()
+                }
+            }
+            addOnFailureListener {
+                println(it)
+                Toast.makeText(applicationContext, "Could not find landmark", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    /****************************************** PHOTO *************************************************/
     private fun dispatchTakePictureIntent() {
         Intent(MediaStore.ACTION_IMAGE_CAPTURE).also { takePictureIntent ->
             takePictureIntent.resolveActivity(packageManager)?.also {
                 val photoFile: File? = try {
                     createImageFile()
-                } catch (ex: IOException) {
-                    println("Error Accrued $ex")
-                    null
-                }
+                } catch (ex: IOException) { null }
                 photoFile?.also {
-                    val photoURI: Uri = FileProvider.getUriForFile(
-                        this,
-                        "com.mydomain.fileprovider",
-                        it
-                    )
+                    val photoURI: Uri = FileProvider.getUriForFile(this, "com.mydomain.fileprovider", it )
                     takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoURI)
                     startActivityForResult(takePictureIntent, REQUEST_IMAGE_CAPTURE)
                 }
@@ -183,11 +195,7 @@ class MainActivity : AppCompatActivity(),
     private fun createImageFile(): File {
         val timeStamp = getDateInstance()
         val storageDir: File? = getExternalFilesDir(Environment.DIRECTORY_PICTURES)
-        return File.createTempFile(
-            "JPEG_${timeStamp}_",
-            ".jpg",
-            storageDir
-        ).apply {
+        return File.createTempFile("JPEG_${timeStamp}_", ".jpg", storageDir).apply {
             currentPhotoPath = absolutePath
         }
     }
@@ -233,16 +241,14 @@ class MainActivity : AppCompatActivity(),
 
             if (latitude != null && longitude != null) {
                 setTitleText()
-                requestArticles(request.getLatLngTag())
+                requestArticles(null)
             }
         }
     }
 
     private fun setTitleText(){
-        val city = Geocoder (
-            this,
-            Locale.getDefault()
-        ).getFromLocation(latitude!!, longitude!!, 1)
+        val city = Geocoder (this, Locale.getDefault())
+            .getFromLocation(latitude!!, longitude!!, 1)
 
         val text = when {
             city[0].locality != null -> city[0].locality
@@ -259,8 +265,7 @@ class MainActivity : AppCompatActivity(),
             true
         } else {
             ActivityCompat.requestPermissions(this,
-                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
-                requestPermissionLocation)
+                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), requestPermissionLocation)
             false
         }
     }
@@ -279,9 +284,7 @@ class MainActivity : AppCompatActivity(),
             .setMessage("GPS is off, please turn it on")
             .setCancelable(false)
             .setPositiveButton("yes") { _, _ ->
-                startActivityForResult(
-                    Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS),
-                    11)
+                startActivityForResult( Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS), 11)
             }
             .setNegativeButton("no") { dialog, _ ->
                 dialog.cancel()
@@ -297,10 +300,8 @@ class MainActivity : AppCompatActivity(),
             .setMessage("Network is of, the app is useless without it. Please turn it back on")
             .setCancelable(false)
             .setPositiveButton("yes") { _, _ ->
-                startActivityForResult(
-                    Intent(Settings.ACTION_NETWORK_OPERATOR_SETTINGS),
-                    12)
-                requestArticles(request.getLatLngTag())
+                startActivityForResult( Intent(Settings.ACTION_NETWORK_OPERATOR_SETTINGS), 12)
+                requestArticles(null)
             }
             .setNegativeButton("no") { dialog, _ ->
                 dialog.cancel()
@@ -311,7 +312,7 @@ class MainActivity : AppCompatActivity(),
     }
 
     /***************************** REQUEST DATA FROM WIKIPEDIA *****************************/
-    fun requestArticles(tag: String) {
+    fun requestArticles(tag: String?) {
         if ((getSystemService(WIFI_SERVICE) as WifiManager).isWifiEnabled) {
             if (latitude != null && longitude != null){
                 request = DataRequests(requestQueue)
@@ -352,11 +353,26 @@ class MainActivity : AppCompatActivity(),
     }
 
     /************************************ GO TO ACTIVITY ***************************************/
-    private fun getRandomArticle() {
-        if (!isFinishing) { goTo(articles.shuffled().first()) }
-    }
     override fun onNearYouFragmentInteraction(article: JSONObject) {
-        if (!isFinishing) { goTo(article) }
+        if (!isFinishing) {
+            with( Intent(this, ArticleActivity::class.java) ) {
+                putExtra ("title",
+                    if (article.has("displaytitle"))
+                        article.getString("displaytitle")
+                    else "No title available"
+                )
+                putExtra ("description",
+                    when {
+                        article.has("description") -> article.getString("description")
+                        article.has("extract") -> article.getString("extract")
+                        else -> "No description available"
+                    }
+                )
+                if (article.has("originalimage"))
+                    putExtra("image", article.getJSONObject("originalimage").getString("source"))
+                startActivity(this)
+            }
+        }
     }
 
     override fun onSavedArticleFragmentInteraction(article: Article) {
@@ -368,31 +384,6 @@ class MainActivity : AppCompatActivity(),
                 putExtra("text",  article.text)
                 startActivity(this)
             }
-        }
-    }
-
-    private fun goTo(article: JSONObject) {
-        with(Intent(this, ArticleActivity::class.java)) {
-            putExtra(
-                "title",
-                if (article.has("displaytitle"))
-                    article.getString("displaytitle")
-                else "No title available"
-            )
-
-            putExtra(
-                "description",
-                when {
-                    article.has("description") -> article.getString("description")
-                    article.has("extract") -> article.getString("extract")
-                    else -> "No description available"
-                }
-            )
-
-            if (article.has("originalimage"))
-                putExtra("image", article.getJSONObject("originalimage").getString("source"))
-
-            startActivity(this)
         }
     }
 }
