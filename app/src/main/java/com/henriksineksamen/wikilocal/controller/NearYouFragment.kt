@@ -30,9 +30,9 @@ class NearYouFragment : Fragment() {
 
         swipeContainer = view.swipeContainer
         swipeContainer.setOnRefreshListener {
-            updateWithThread()
-            refersRecyclerView()
+            (activity as MainActivity).requestArticles(null)
         }
+
         swipeContainer.setColorSchemeResources (
             R.color.color_primary,
             R.color.spin_first_color,
@@ -53,21 +53,15 @@ class NearYouFragment : Fragment() {
         listener = null
     }
 
-    fun updateList (articles: MutableList<JSONObject>) { this.articles = articles }
-
-    fun refersRecyclerView() {
-        with (recyclerView) {
-            layoutManager = LinearLayoutManager(context)
-            adapter = NearYouRecyclerViewAdapter(articles, listener)
+    fun updateList (articles: MutableList<JSONObject>) {
+        if (articles != recyclerView.adapter) {
+            with (recyclerView) {
+                layoutManager = LinearLayoutManager(context)
+                adapter = NearYouRecyclerViewAdapter(articles, listener)
+            }
+            this.articles = articles
+            swipeContainer.isRefreshing = false
         }
-    }
-
-    private fun updateWithThread() {
-        (activity as MainActivity).requestArticles(null)
-    }
-
-    fun removeUpdaterIcon() {
-        swipeContainer.isRefreshing = false
     }
 
     interface OnNearYouFragmentInteractionListener {

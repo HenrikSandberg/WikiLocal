@@ -16,14 +16,10 @@ import android.os.Environment
 import android.os.Looper
 import android.provider.MediaStore
 import android.provider.Settings
-import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import com.henriksineksamen.wikilocal.R
-import androidx.viewpager.widget.ViewPager
-import com.google.android.material.tabs.TabLayout
-import androidx.appcompat.widget.Toolbar
 import androidx.core.app.ActivityCompat
 import androidx.core.content.FileProvider
 import com.android.volley.RequestQueue
@@ -32,7 +28,6 @@ import com.henriksineksamen.wikilocal.model.DataRequests
 import com.henriksineksamen.wikilocal.model.ViewPagerAdapter
 import com.henriksineksamen.wikilocal.model.database.Article
 import com.google.android.gms.location.*
-import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.firebase.ml.vision.FirebaseVision
 import com.google.firebase.ml.vision.cloud.FirebaseVisionCloudDetectorOptions
 import com.google.firebase.ml.vision.common.FirebaseVisionImage
@@ -48,17 +43,15 @@ class MainActivity : AppCompatActivity(),
     SavedArticleFragment.OnListFragmentInteractionListener {
 
     /****************************************** GLOBAL VARIABLES *************************************************/
-    private var articles: MutableList<JSONObject> = mutableListOf()
-
     //HTTP Requests
-    private lateinit var requestQueue: RequestQueue
+    private lateinit var requestQueue:RequestQueue
     private lateinit var request: DataRequests
 
     //Location
     private var latitude: Double? = null
     private var longitude:Double? = null
     private var lookForLandmark = false
-    private lateinit var locationClient: FusedLocationProviderClient
+    private lateinit var locationProvider: FusedLocationProviderClient
     private lateinit var locationRequest: LocationRequest
     private val requestPermissionLocation = 100
 
@@ -77,7 +70,7 @@ class MainActivity : AppCompatActivity(),
 
         //Set up toolbar
         setSupportActionBar(toolbar)
-        supportActionBar!!.setDisplayHomeAsUpEnabled(false)
+        supportActionBar?.setDisplayHomeAsUpEnabled(false)
         tabs.setupWithViewPager(viewpager)
         setupViewPager()
 
@@ -87,7 +80,7 @@ class MainActivity : AppCompatActivity(),
         if (!locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
             alertUser("GPS is off, please turn it on", Settings.ACTION_LOCATION_SOURCE_SETTINGS, 11)
         }
-        if ( checkPermission(this) ) { updateLocation() }
+        if (checkPermission(this)) { updateLocation() }
 
         //Camera button pressed
         photo_button.setOnClickListener { dispatchTakePictureIntent() }
@@ -96,11 +89,11 @@ class MainActivity : AppCompatActivity(),
     override fun onStart() {
         super.onStart()
         //Activate listener for HTTP Requests
-        requestQueue = Volley.newRequestQueue(this) //Create and listen web requests
+        requestQueue = Volley.newRequestQueue(this)
+        request = DataRequests(requestQueue)
         requestQueue.addRequestFinishedListener<JSONObject> {//Update when location manager return
             if (it.tag == request.articlesTag()) {
-                articles = request.getArticles()
-                updateList()
+                nearYouFragment?.updateList(request.getArticles())
             }
             if (it.tag == request.landmarkRequestTag() && lookForLandmark) { //When you click on the camera
                 lookForLandmark = false
@@ -111,21 +104,18 @@ class MainActivity : AppCompatActivity(),
 
     override fun onStop() {
         super.onStop()
-        locationClient.removeLocationUpdates(locationCallback)
+        locationProvider.removeLocationUpdates(locationCallback)
         requestQueue.stop()
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-        finish()
-    }
-
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        if ( requestCode == requestImage ) {
+        if (requestCode == requestImage) {
             val bmOptions = BitmapFactory.Options().apply {
                 BitmapFactory.decodeFile(currentPhotoPath, this)
             }
-            BitmapFactory.decodeFile(currentPhotoPath, bmOptions)?.also { bitmap -> recognizeImage(bitmap) }
+            BitmapFactory.decodeFile(currentPhotoPath, bmOptions)?.also {
+                    bitmap -> recognizeImage(bitmap) //Activate the call to Firebase
+            }
         }
         super.onActivityResult(requestCode, resultCode, data)
     }
@@ -136,14 +126,16 @@ class MainActivity : AppCompatActivity(),
             .setModelType(FirebaseVisionCloudDetectorOptions.LATEST_MODEL)
             .setMaxResults(5)
             .build()
-        val detector = FirebaseVision.getInstance().getVisionCloudLandmarkDetector(options)
+        val detector = FirebaseVision //Creates the landmark detector
+            .getInstance()
+            .getVisionCloudLandmarkDetector(options)
         val image = FirebaseVisionImage.fromBitmap(bitmap)
         var bestConfidence: Float? = null
         var fireLat = 0.0
         var fireLon = 0.0
 
         Toast.makeText(applicationContext, "Looking for article", Toast.LENGTH_SHORT).show()
-        with( detector.detectInImage(image) ) {
+        with (detector.detectInImage(image)) {
             addOnSuccessListener { fireLandmarks ->
                 if (fireLandmarks.size > 0) {
                     fireLandmarks.forEach { landmark ->
@@ -157,7 +149,6 @@ class MainActivity : AppCompatActivity(),
                         }
                     }
                     lookForLandmark = true
-                    request = DataRequests(requestQueue)
                     request.requestArticles(fireLat, fireLon, request.landmarkRequestTag())
                 } else {
                     Toast.makeText(applicationContext, "Could not find landmark", Toast.LENGTH_SHORT).show()
@@ -210,7 +201,7 @@ class MainActivity : AppCompatActivity(),
         LocationServices.getSettingsClient(this).checkLocationSettings(
                 LocationSettingsRequest.Builder().addLocationRequest(locationRequest).build()
         )
-        locationClient = LocationServices.getFusedLocationProviderClient(this)
+        locationProvider = LocationServices.getFusedLocationProviderClient(this)
 
         if ( ActivityCompat.checkSelfPermission (this, Manifest.permission.ACCESS_FINE_LOCATION )
             != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission (this,
@@ -218,7 +209,7 @@ class MainActivity : AppCompatActivity(),
             )
         != PackageManager.PERMISSION_GRANTED) { return }
 
-        locationClient.requestLocationUpdates( locationRequest, locationCallback, Looper.myLooper() )
+        locationProvider.requestLocationUpdates( locationRequest, locationCallback, Looper.myLooper() )
     }
 
     private fun updateContent( location: Location?) {
@@ -282,8 +273,8 @@ class MainActivity : AppCompatActivity(),
     fun requestArticles(tag: String?) {
         if ( (getSystemService(WIFI_SERVICE) as WifiManager).isWifiEnabled) {
             if (latitude != null && longitude != null) {
-                request = DataRequests(requestQueue)
                 request.requestArticles(latitude!!, longitude!!, tag)
+
             } else alertUser("GPS is off, please turn it on",
                 Settings.ACTION_LOCATION_SOURCE_SETTINGS, 11)
 
@@ -295,8 +286,7 @@ class MainActivity : AppCompatActivity(),
     private fun setupViewPager() {
         if ( nearYouFragment == null ) {
             nearYouFragment = NearYouFragment()
-            nearYouFragment!!.updateList(articles)
-        } else updateList()
+        }
 
         if (savedArticleFragment == null) {
             savedArticleFragment = SavedArticleFragment()
@@ -309,47 +299,33 @@ class MainActivity : AppCompatActivity(),
         }
     }
 
-    private fun updateList() {
-        with ( nearYouFragment ) {
-            if ( this != null ){
-                updateList(articles)
-                refersRecyclerView()
-                removeUpdaterIcon()
-            } else setupViewPager()
-        }
-    }
-
     /************************************ GO TO ACTIVITY ***************************************/
     override fun onNearYouFragmentInteraction(article: JSONObject) {
-        if ( !isFinishing ) {
-            with ( Intent(this, ArticleActivity::class.java) ) {
-                putExtra ("title",
-                    if (article.has("displaytitle")) article.getString("displaytitle")
-                    else "No title available"
-                )
-                putExtra ("description",
-                    when {
-                        article.has("description") -> article.getString("description")
-                        article.has("extract") -> article.getString("extract")
-                        else -> "No description available"
-                    }
-                )
-                if (article.has("originalimage"))
-                    putExtra("image", article.getJSONObject("originalimage").getString("source"))
-                startActivity(this)
-            }
+        with ( Intent(this, ArticleActivity::class.java) ) {
+            putExtra ("title",
+                if (article.has("displaytitle")) article.getString("displaytitle")
+                else "No title available"
+            )
+            putExtra ("description",
+                when {
+                    article.has("description") -> article.getString("description")
+                    article.has("extract") -> article.getString("extract")
+                    else -> "No description available"
+                }
+            )
+            if (article.has("originalimage"))
+                putExtra("image", article.getJSONObject("originalimage").getString("source"))
+            startActivity(this)
         }
     }
 
     override fun onSavedArticleFragmentInteraction(article: Article) {
-        if ( !isFinishing ) {
-            with ( Intent(this, ArticleActivity::class.java) ) {
-                putExtra("title", article.title)
-                putExtra("description", article.description)
-                putExtra("image",  article.image)
-                putExtra("text",  article.text)
-                startActivity(this)
-            }
+        with ( Intent(this, ArticleActivity::class.java) ) {
+            putExtra("title", article.title)
+            putExtra("description", article.description)
+            putExtra("image",  article.image)
+            putExtra("text",  article.text)
+            startActivity(this)
         }
     }
 }

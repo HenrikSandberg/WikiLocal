@@ -73,14 +73,14 @@ class DataRequests(private val requestQueue: RequestQueue) {
                 title.replace(' ', '_')
         )
 
-        val articleRequest = JsonObjectRequest(
+        val articleRequest = JsonObjectRequest (
             Request.Method.GET, url, null,
             Response.Listener{ response ->
                 text = response
                     .getJSONArray("sections")
                     .getJSONObject(0)
                     .getString("text")
-                    .replace(Regex("<a.*?>"), "")
+                    .replace(Regex("<a.*?>"), "") //Handle HTML I don't want to display to users
                     .replace(Regex("</a>"), "")
                     .replace(Regex("""\[.*?]"""), "")
                     .replace(Regex("<img.*?>"), "")
