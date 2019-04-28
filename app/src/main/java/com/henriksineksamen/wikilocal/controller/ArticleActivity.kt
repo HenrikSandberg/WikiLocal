@@ -66,26 +66,15 @@ class ArticleActivity : AppCompatActivity() {
             }
         }
 
-        //CREATE ADD
-        try {
-            MobileAds.initialize(this, "ca-app-pub-9638675442193636~7851936375")
-            val mAdView = findViewById<AdView>(R.id.adView)
-            val adRequest = AdRequest.Builder().build()
-            mAdView.loadAd(adRequest)
-            val production = true
-            mAdView.adUnitId = if (production) {
-                 "ca-app-pub-9638675442193636/8398731284"
-            } else {
-                "ca-app-pub-3940256099942544/6300978111"
-            }
-        } catch (exception: IllegalStateException){
-            println("ADD ERROR $exception")
-        }
+        //create add
+        MobileAds.initialize(this, "ca-app-pub-9638675442193636~7851936375")
+        val mAdView = findViewById<AdView>(R.id.adView)
+        val adRequest = AdRequest.Builder().build()
+        mAdView.loadAd(adRequest)
 
         lookIfArticleIsSavedAlready()
         displayArticle()
     }
-
 
     override fun onStop() {
         super.onStop()

@@ -16,7 +16,8 @@
 
     <uses-feature
             android:name="android.hardware.sensor.accelerometer"
-            android:required="true"/>
+            android:required="true"
+    />
 
     <application
             android:allowBackup="true"
@@ -35,7 +36,8 @@
                     android:grantUriPermissions="true">
                 <meta-data
                         android:name="android.support.FILE_PROVIDER_PATHS"
-                        android:resource="@xml/file_paths"/>
+                        android:resource="@xml/file_paths"
+                />
             </provider>
 
         <meta-data
