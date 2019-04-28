@@ -19,6 +19,7 @@ import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.AdView
 import com.google.android.gms.ads.MobileAds
 import com.henriksineksamen.wikilocal.model.DataRequests
+import kotlinx.android.synthetic.main.activity_article.*
 import org.json.JSONObject
 class ArticleActivity : AppCompatActivity() {
 
@@ -47,7 +48,7 @@ class ArticleActivity : AppCompatActivity() {
         description = intent.getStringExtra("description")
 
         //Set listeners
-        val faveButton = findViewById<ImageButton>(R.id.add_favorite)
+        val faveButton = add_favorite
         faveButton.setOnClickListener {
             updateFavoriteIcon()
             if (isSaved) addArticle() else removeSavedArticle()
@@ -68,7 +69,7 @@ class ArticleActivity : AppCompatActivity() {
 
         //create add
         MobileAds.initialize(this, "ca-app-pub-9638675442193636~7851936375")
-        val mAdView = findViewById<AdView>(R.id.adView)
+        val mAdView = adView
         val adRequest = AdRequest.Builder().build()
         mAdView.loadAd(adRequest)
 
@@ -128,7 +129,7 @@ class ArticleActivity : AppCompatActivity() {
     /****************************************** DISPLAY CONTENT *************************************************/
     private fun updateFavoriteIcon() {
         isSaved = !isSaved
-        val faveButton = findViewById<ImageView>(R.id.add_favorite)
+        val faveButton = add_favorite
         faveButton.setImageResource(
             when (isSaved) {
                 true -> R.drawable.ic_favorite_40dp
@@ -138,7 +139,7 @@ class ArticleActivity : AppCompatActivity() {
     }
 
     private fun displayArticle() {
-        articleTextView = findViewById(R.id.htmlToTextView)
+        articleTextView = htmlToTextView
 
         if (intent.getStringExtra("text") != null) {
             text = intent.getStringExtra("text")
@@ -148,8 +149,8 @@ class ArticleActivity : AppCompatActivity() {
         }
         articleTextView.text = HtmlCompat.fromHtml(text, 0)
 
-        findViewById<TextView>(R.id.title_text).text = title
-        val imageView = findViewById<ImageView>(R.id.top_image)
+        title_text.text = title
+        val imageView = top_image
 
         if (image != null) {
             Picasso.with(this)

@@ -11,6 +11,7 @@ import android.view.ViewGroup
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.henriksineksamen.wikilocal.R
 import com.henriksineksamen.wikilocal.model.NearYouRecyclerViewAdapter
+import kotlinx.android.synthetic.main.fragment_near_you_list.view.*
 import org.json.JSONObject
 
 class NearYouFragment : Fragment() {
@@ -25,14 +26,13 @@ class NearYouFragment : Fragment() {
         savedInstanceState: Bundle?
     ): View? {
         val view = inflater.inflate(R.layout.fragment_near_you_list, container, false)
-        recyclerView = view.findViewById(R.id.recycler)
+        recyclerView = view.recycler
 
-        swipeContainer = view.findViewById(R.id.swipeContainer)
+        swipeContainer = view.swipeContainer
         swipeContainer.setOnRefreshListener {
             updateWithThread()
             refersRecyclerView()
         }
-
         swipeContainer.setColorSchemeResources (
             R.color.color_primary,
             R.color.spin_first_color,
@@ -45,7 +45,7 @@ class NearYouFragment : Fragment() {
 
     override fun onAttach(context: Context) {
         super.onAttach(context)
-        if (context is OnNearYouFragmentInteractionListener) { listener = context }
+        if (context is OnNearYouFragmentInteractionListener) listener = context
     }
 
     override fun onDetach() {
