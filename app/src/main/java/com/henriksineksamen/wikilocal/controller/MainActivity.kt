@@ -85,6 +85,12 @@ class MainActivity : AppCompatActivity(),
         tabLayout.setupWithViewPager(viewPager)
         setupViewPager()
 
+        //Set Up location Manager
+        locationRequest = LocationRequest()
+        val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        if (!locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) { noGpsAlert() }
+        if (checkPermission(this)){ updateLocation() }
+
         //Camera button pressed
         findViewById<FloatingActionButton>(R.id.photo_button).setOnClickListener {
             dispatchTakePictureIntent()
@@ -93,13 +99,8 @@ class MainActivity : AppCompatActivity(),
 
     override fun onStart() {
         super.onStart()
+        //Activate listener for HTTP Requests
         requestQueue = Volley.newRequestQueue(this)
-
-        locationRequest = LocationRequest()
-        val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
-        if (!locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) { noGpsAlert() }
-        if (checkPermission(this)){ updateLocation() }
-
         requestQueue.addRequestFinishedListener<JSONObject> {
             if (it.tag == request.articlesTag()) {
                 articles = request.getArticles()
@@ -152,7 +153,6 @@ class MainActivity : AppCompatActivity(),
                 if (fireLandmarks.size > 0) {
                     fireLandmarks.forEach { landmark ->
                         val confidence = landmark.confidence
-                        println(landmark.landmark)
                         if (bestConfidence == null || confidence >= bestConfidence!!) {
                             bestConfidence = confidence
                             landmark.locations.forEach { location ->

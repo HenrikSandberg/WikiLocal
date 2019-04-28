@@ -57,12 +57,7 @@ class DataRequests(private val requestQueue: RequestQueue) {
             articles.clear()
             val articleRequest = JsonObjectRequest (
                 Request.Method.GET, url, null,
-                Response.Listener {
-                    articles.add(it)
-
-                    if (tag == landmarkTag)
-                        println(it)
-                },
+                Response.Listener { articles.add(it) },
                 Response.ErrorListener { println("Error: $it") }
             )
 

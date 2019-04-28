@@ -152,14 +152,9 @@ class ArticleActivity : AppCompatActivity() {
         val imageView = findViewById<ImageView>(R.id.top_image)
 
         if (image != null) {
-            println(image!!.length)
-            try {
-                Picasso.with(this)
-                    .load(image)
-                    .into(imageView)
-            } catch (ex: Exception){
-                println(ex)
-            }
+            Picasso.with(this)
+                .load(image)
+                .into(imageView)
 
         } else {
             val parent = imageView.parent as ViewManager
