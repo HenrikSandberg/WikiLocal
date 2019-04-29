@@ -6,6 +6,10 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import android.location.Geocoder
 import android.location.Location
 import android.location.LocationManager
@@ -40,7 +44,8 @@ import java.util.*
 
 class MainActivity : AppCompatActivity(),
     NearYouFragment.OnNearYouFragmentInteractionListener,
-    SavedArticleFragment.OnListFragmentInteractionListener {
+    SavedArticleFragment.OnListFragmentInteractionListener,
+    SensorEventListener{
 
     /****************************************** GLOBAL VARIABLES *************************************************/
     //HTTP Requests
@@ -49,7 +54,7 @@ class MainActivity : AppCompatActivity(),
 
     //Location
     private var latitude: Double? = null
-    private var longitude:Double? = null
+    private var longitude: Double? = null
     private var lookForLandmark = false
     private lateinit var locationProvider: FusedLocationProviderClient
     private lateinit var locationRequest: LocationRequest
@@ -58,6 +63,9 @@ class MainActivity : AppCompatActivity(),
     //Image
     private val requestImage = 1
     private var currentPhotoPath: String? = null
+
+    //Sensor
+    private lateinit var sensorManager:SensorManager
 
     //Fragments
     private var nearYouFragment: NearYouFragment? = null
@@ -73,6 +81,12 @@ class MainActivity : AppCompatActivity(),
         supportActionBar?.setDisplayHomeAsUpEnabled(false)
         tabs.setupWithViewPager(viewpager)
         setupViewPager()
+
+        sensorManager = applicationContext.getSystemService(Context.SENSOR_SERVICE) as SensorManager
+        val sensor: Sensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+
+        sensor.also {sensorManager.registerListener(this, sensor, SensorManager.SENSOR_DELAY_GAME)}
+
 
         //Set Up location Manager
         locationRequest = LocationRequest()
@@ -113,11 +127,26 @@ class MainActivity : AppCompatActivity(),
             val bmOptions = BitmapFactory.Options().apply {
                 BitmapFactory.decodeFile(currentPhotoPath, this)
             }
-            BitmapFactory.decodeFile(currentPhotoPath, bmOptions)?.also {
-                    bitmap -> recognizeImage(bitmap) //Activate the call to Firebase
+            BitmapFactory.decodeFile(currentPhotoPath, bmOptions)?.also { bitmap ->
+                recognizeImage(bitmap) //Activate the call to Firebase
             }
         }
         super.onActivityResult(requestCode, resultCode, data)
+    }
+
+    override fun onSensorChanged(event: SensorEvent?) {
+        if (event != null && nearYouFragment != null) {
+            val xAccess = event.values[0] / SensorManager.GRAVITY_EARTH
+            val yAccess = event.values[1] / SensorManager.GRAVITY_EARTH
+            val zAccess = event.values[2] / SensorManager.GRAVITY_EARTH
+
+            val force = Math.sqrt(xAccess.toDouble() * xAccess + yAccess * yAccess + zAccess * zAccess).toFloat()
+
+            if (force > 2.7f) {
+                onNearYouFragmentInteraction(nearYouFragment!!.getRanduomArticle())
+            }
+
+        }
     }
 
     /****************************************** RECOGNIZE LANDMARK *************************************************/
@@ -328,4 +357,6 @@ class MainActivity : AppCompatActivity(),
             startActivity(this)
         }
     }
+
+    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {} //Needed to be implemented
 }

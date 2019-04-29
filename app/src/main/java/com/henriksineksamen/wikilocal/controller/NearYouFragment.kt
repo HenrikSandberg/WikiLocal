@@ -64,6 +64,8 @@ class NearYouFragment : Fragment() {
         }
     }
 
+    fun getRanduomArticle(): JSONObject = articles[(0..articles.size).first]
+
     interface OnNearYouFragmentInteractionListener {
         fun onNearYouFragmentInteraction(article: JSONObject)
     }
