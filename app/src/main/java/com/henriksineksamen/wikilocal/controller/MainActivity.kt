@@ -6,10 +6,6 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.hardware.Sensor
-import android.hardware.SensorEvent
-import android.hardware.SensorEventListener
-import android.hardware.SensorManager
 import android.location.Geocoder
 import android.location.Location
 import android.location.LocationManager
@@ -44,8 +40,7 @@ import java.util.*
 
 class MainActivity : AppCompatActivity(),
     NearYouFragment.OnNearYouFragmentInteractionListener,
-    SavedArticleFragment.OnListFragmentInteractionListener,
-    SensorEventListener{
+    SavedArticleFragment.OnListFragmentInteractionListener {
 
     /****************************************** GLOBAL VARIABLES *************************************************/
     //HTTP Requests
@@ -64,10 +59,6 @@ class MainActivity : AppCompatActivity(),
     private val requestImage = 1
     private var currentPhotoPath: String? = null
 
-    //Sensor
-    private lateinit var sensorManager:SensorManager
-    private var openArticleWithShake = true
-
     //Fragments
     private var nearYouFragment: NearYouFragment? = null
     private var savedArticleFragment: SavedArticleFragment? = null
@@ -82,12 +73,6 @@ class MainActivity : AppCompatActivity(),
         supportActionBar?.setDisplayHomeAsUpEnabled(false)
         tabs.setupWithViewPager(viewpager)
         setupViewPager()
-
-        sensorManager = applicationContext.getSystemService(Context.SENSOR_SERVICE) as SensorManager
-        val sensor: Sensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
-
-        sensor.also {sensorManager.registerListener(this, sensor, SensorManager.SENSOR_DELAY_GAME)}
-
 
         //Set Up location Manager
         locationRequest = LocationRequest()
@@ -117,11 +102,6 @@ class MainActivity : AppCompatActivity(),
         }
     }
 
-    override fun onResume() {
-        super.onResume()
-        openArticleWithShake = true
-    }
-
     override fun onStop() {
         super.onStop()
         locationProvider.removeLocationUpdates(locationCallback)
@@ -138,21 +118,6 @@ class MainActivity : AppCompatActivity(),
             }
         }
         super.onActivityResult(requestCode, resultCode, data)
-    }
-
-    override fun onSensorChanged(event: SensorEvent?) {
-        if (event != null && nearYouFragment != null && openArticleWithShake) {
-            val xAccess = event.values[0] / SensorManager.GRAVITY_EARTH
-            val yAccess = event.values[1] / SensorManager.GRAVITY_EARTH
-            val zAccess = event.values[2] / SensorManager.GRAVITY_EARTH
-
-            val force = Math.sqrt(xAccess.toDouble() * xAccess + yAccess * yAccess + zAccess * zAccess).toFloat()
-
-            if (force > 2.7f) {
-                openArticleWithShake = false
-                onNearYouFragmentInteraction(nearYouFragment!!.getRandomArticle())
-            }
-        }
     }
 
     /****************************************** RECOGNIZE LANDMARK *************************************************/
@@ -286,7 +251,6 @@ class MainActivity : AppCompatActivity(),
     }
 
     /***************************** HANDLE HARDWARE TURNED OFF *************************** */
-
     private fun alertUser(message: String, setting: String, requestCode: Int) {
         AlertDialog
             .Builder(this)
@@ -363,6 +327,4 @@ class MainActivity : AppCompatActivity(),
             startActivity(this)
         }
     }
-
-    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {} //Needed to be implemented
 }
