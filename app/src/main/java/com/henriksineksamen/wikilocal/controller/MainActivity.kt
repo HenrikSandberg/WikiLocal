@@ -66,6 +66,7 @@ class MainActivity : AppCompatActivity(),
 
     //Sensor
     private lateinit var sensorManager:SensorManager
+    private var openArticleWithShake = true
 
     //Fragments
     private var nearYouFragment: NearYouFragment? = null
@@ -116,6 +117,11 @@ class MainActivity : AppCompatActivity(),
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        openArticleWithShake = true
+    }
+
     override fun onStop() {
         super.onStop()
         locationProvider.removeLocationUpdates(locationCallback)
@@ -135,7 +141,7 @@ class MainActivity : AppCompatActivity(),
     }
 
     override fun onSensorChanged(event: SensorEvent?) {
-        if (event != null && nearYouFragment != null) {
+        if (event != null && nearYouFragment != null && openArticleWithShake) {
             val xAccess = event.values[0] / SensorManager.GRAVITY_EARTH
             val yAccess = event.values[1] / SensorManager.GRAVITY_EARTH
             val zAccess = event.values[2] / SensorManager.GRAVITY_EARTH
@@ -143,9 +149,9 @@ class MainActivity : AppCompatActivity(),
             val force = Math.sqrt(xAccess.toDouble() * xAccess + yAccess * yAccess + zAccess * zAccess).toFloat()
 
             if (force > 2.7f) {
-                onNearYouFragmentInteraction(nearYouFragment!!.getRanduomArticle())
+                openArticleWithShake = false
+                onNearYouFragmentInteraction(nearYouFragment!!.getRandomArticle())
             }
-
         }
     }
 
